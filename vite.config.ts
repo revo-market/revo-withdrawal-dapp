@@ -4,5 +4,12 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/revo-withdrawal-dapp/'
+  base: '/revo-withdrawal-dapp/',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: () => 'everything.js'
+      }
+    }
+  }
 })
