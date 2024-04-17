@@ -2,7 +2,7 @@ import {useReadContract, useReadContracts} from "wagmi";
 import {farmBotAbi} from "../constants/abis/farmBot";
 import {Address} from "viem";
 import {liquidityPoolAbi} from "../constants/abis/liquidityPool";
-import {useQueryClient} from "@tanstack/react-query";
+import {InvalidateQueryFilters, useQueryClient} from "@tanstack/react-query";
 import {useCallback} from "react";
 
 /**
@@ -32,7 +32,7 @@ export function useStakingTokenAmounts(rfpAmount: BigInt, farmBotAddress: Addres
   })
   const queryClient = useQueryClient()
   const invalidate = useCallback(() => {
-    return queryClient.invalidateQueries(queryKey)
+    return queryClient.invalidateQueries(queryKey as InvalidateQueryFilters)
   }, [queryClient, queryKey])
   if (!data) {
     return {
