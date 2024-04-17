@@ -17,7 +17,7 @@ const projectId: string = import.meta.env.VITE_PROJECT_ID || "";
 const metadata = {
   name: "Revo Withdrawal Dapp",
   description: "A dapp for withdrawing Revo assets",
-  url: "https://revo.market",
+  url: "https://revo-market.github.io/revo-withdrawal-dapp/",
   icons: ["/revo-withdrawal-dapp/revo-logo.png"],
 };
 
