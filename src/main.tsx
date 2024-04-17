@@ -18,7 +18,7 @@ const metadata = {
   name: "Revo Withdrawal Dapp",
   description: "A dapp for withdrawing Revo assets",
   url: "https://revo-market.github.io/revo-withdrawal-dapp/",
-  icons: ["/revo-withdrawal-dapp/revo-logo.png"],
+  icons: ["https://revo-market.github.io/revo-withdrawal-dapp/favicon.png"],
 };
 
 const wagmiConfig = defaultWagmiConfig({
