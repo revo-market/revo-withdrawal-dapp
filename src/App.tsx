@@ -168,7 +168,7 @@ export default function App() {
         <div className={styles.header}>
           <div>
             <img
-              src="/revo-logo.png"
+              src="/revo-withdrawal-dapp/revo-logo.png"
               alt="Revo Logo"
               height="87.5"
               width="436"
