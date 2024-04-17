@@ -1,6 +1,6 @@
 function __vite__mapDeps(indexes) {
   if (!__vite__mapDeps.viteFileDeps) {
-    __vite__mapDeps.viteFileDeps = ["assets/index-BQMVJFMp.js","assets/___vite-browser-external_commonjs-proxy-CDaoZhA7.js","assets/index.es-DLqtL-uX.js"]
+    __vite__mapDeps.viteFileDeps = ["assets/js/index-BQMVJFMp.js","assets/js/___vite-browser-external_commonjs-proxy-CDaoZhA7.js","assets/js/index.es-DLqtL-uX.js"]
   }
   return indexes.map((i) => __vite__mapDeps.viteFileDeps[i])
 }
