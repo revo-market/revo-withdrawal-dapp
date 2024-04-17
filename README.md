@@ -12,3 +12,11 @@ Start by cloning the repo
 yarn
 yarn dev
 ```
+
+### Deploying
+
+```shell
+yarn
+yarn build
+yarn deploy
+```
