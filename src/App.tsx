@@ -5,13 +5,16 @@ import {farmBrokerBotAbi} from "./constants/abis/farmBrokerBot";
 import {
   BROKER_BOT_ADDRESS,
   DEFAULT_MIN_AMOUNT_OUT_PERCENT,
+  FARM_BOT_ADDRESSES,
+  FARM_BOT_LP_ADDRESSES, FARM_BOT_STAKING_TOKENS,
+  FarmBot,
   MAX_UINT256,
-  MCUSD_MCEUR_FARM_BOT_ADDRESS, MCUSD_MCEUR_LP_ADDRESS
 } from "./constants";
 import {erc20abi} from "./constants/abis/erc20";
 import {useTransactionDeadline} from "./hooks/useTransactionDeadline";
 import {useStakingTokenAmounts} from "./hooks/useStakingTokenAmounts";
 import BigNumber from "bignumber.js";
+import Dropdown from "./Dropdown";
 
 function WriteButton({onClick, text, disabled}: { onClick: () => void, text: string, disabled: boolean }) {
   const className = disabled ? 'btn-disabled' : 'btn'
@@ -42,22 +45,33 @@ function ConnectYourWalletReminder() {
   )
 }
 
-function BalanceDisplay({balanceUSD}: { balanceUSD: string }) {
-  // TODO eventually make more general to handle PACT-CELO pool
+function BalanceDisplay({
+                          stakingToken0Amount,
+                          stakingToken1Amount,
+                          farmBot
+                        }: { stakingToken0Amount?: string, stakingToken1Amount?: string, farmBot: FarmBot }) {
+  const [stakingToken0, stakingToken1] = FARM_BOT_STAKING_TOKENS[farmBot]
+  const [amount0, amount1] = [stakingToken0Amount, stakingToken1Amount].map((amount) => amount === undefined ? '-' : BigNumber(amount).div(BigNumber(10).exponentiatedBy(18)).toFixed(2))
   return (
     <div>
       <p>
-        Your balance in mcUSD-mcEUR pool: ~${balanceUSD}
+        Your balance in {farmBot} pool: {amount0} {stakingToken0} and {amount1} {stakingToken1}
       </p>
     </div>
   )
 }
 
-function TransactionButtons({onClickApprove, onClickWithdraw, approveStatus, balanceUSD, isConnected}: {
+function SelectFarmBot({
+                         onSelectFarmBot
+                       }: { currentFarmBot: FarmBot, onSelectFarmBot: (farmBot: FarmBot) => void }) {
+  return (<Dropdown options={Object.values(FarmBot)} onChange={onSelectFarmBot}/>)
+}
+
+function TransactionButtons({onClickApprove, onClickWithdraw, approveStatus, stakingToken0Amount, isConnected}: {
   onClickApprove: () => void,
   onClickWithdraw: () => void,
   approveStatus: string,
-  balanceUSD: string,
+  stakingToken0Amount?: string,
   isConnected: boolean
 }) {
   // todo eventually: check if the user has already approved enough to withdraw
@@ -66,7 +80,7 @@ function TransactionButtons({onClickApprove, onClickWithdraw, approveStatus, bal
       <WriteButton text={'Approve'} onClick={onClickApprove}
                    disabled={approveStatus === 'success' || !isConnected}/>
       <WriteButton onClick={onClickWithdraw} text={'Withdraw'}
-                   disabled={approveStatus !== 'success' || !isConnected || new BigNumber(balanceUSD).isEqualTo(0)}/>
+                   disabled={approveStatus !== 'success' || !isConnected || new BigNumber(stakingToken0Amount ?? '0').isEqualTo(0)}/>
     </div>
   )
 }
@@ -74,7 +88,11 @@ function TransactionButtons({onClickApprove, onClickWithdraw, approveStatus, bal
 export default function App() {
   // TODO add styling, loading and success states for approve/withdraw buttons
   const {isConnected, address} = useAccount()
-  const [isConnectHighlighted, setIsConnectHighlighted] = useState(!isConnected);
+  const [isConnectHighlighted, setIsConnectHighlighted] = useState(!isConnected)
+  const [farmBot, setFarmBot] = useState(FarmBot.mcUSD_mcEUR)
+
+  const fpAddress = FARM_BOT_ADDRESSES[farmBot]
+  const lpAddress = FARM_BOT_LP_ADDRESSES[farmBot]
 
   useEffect(() => {
     if (isConnected) {
@@ -84,7 +102,7 @@ export default function App() {
 
   const {data: balanceOfRFPData, status: balanceOfRFPStatus} = useContractRead({
     abi: erc20abi,
-    address: MCUSD_MCEUR_FARM_BOT_ADDRESS,
+    address: fpAddress,
     functionName: 'balanceOf',
     args: [address],
   })
@@ -95,7 +113,7 @@ export default function App() {
     stakingToken1Amount,
     status: stakingTokenAmountsStatus,
     invalidate: invalidateStakingTokenAmounts
-  } = useStakingTokenAmounts(BigInt(balanceOfRFPData as string ?? '0'), MCUSD_MCEUR_FARM_BOT_ADDRESS, MCUSD_MCEUR_LP_ADDRESS)
+  } = useStakingTokenAmounts(BigInt(balanceOfRFPData as string ?? '0'), fpAddress, lpAddress)
 
   const {
     writeContract: approveWriteContract,
@@ -118,7 +136,7 @@ export default function App() {
 
   function onClickApprove() {
     approveWriteContract?.({
-      address: MCUSD_MCEUR_FARM_BOT_ADDRESS,  // todo eventually: support PACT pool too
+      address: fpAddress,
       abi: erc20abi,
       functionName: 'approve',
       args: [BROKER_BOT_ADDRESS, balanceOfRFPData ?? MAX_UINT256],
@@ -126,13 +144,6 @@ export default function App() {
   }
 
   const txDeadline = useTransactionDeadline()
-  const balanceUSD = useMemo(() => {
-    console.log(`recalculating balanceUSD with stakingToken0Amount ${stakingToken0Amount}`)
-    if (stakingToken0Amount === undefined) {
-      return '-'
-    }
-    return (new BigNumber(stakingToken0Amount).times(2).dividedBy(new BigNumber(10).exponentiatedBy(18))).toFixed(2)
-  }, [stakingToken0Amount])
 
   function onClickWithdraw() {
     const amountToWithdraw = (BigInt(balanceOfRFPData as string ?? '0')).toString();
@@ -142,7 +153,7 @@ export default function App() {
       address: BROKER_BOT_ADDRESS,
       abi: farmBrokerBotAbi,
       functionName: 'withdrawFPForStakingTokens',
-      args: [MCUSD_MCEUR_FARM_BOT_ADDRESS,
+      args: [fpAddress,
         amountToWithdraw,
         amount0Min,
         amount1Min,
@@ -195,12 +206,16 @@ export default function App() {
             <div className={styles.content}>
               <RevoClosureNotice/>
               <br/>
-              {isConnected ? <BalanceDisplay balanceUSD={balanceUSD}/> :
+              {isConnected && <SelectFarmBot currentFarmBot={farmBot} onSelectFarmBot={setFarmBot}/>}
+              <br/>
+              {isConnected ?
+                <BalanceDisplay farmBot={farmBot} stakingToken0Amount={stakingToken0Amount}
+                                stakingToken1Amount={stakingToken1Amount}/> :
                 <ConnectYourWalletReminder/>}
               <br/>
               {isConnected && <TransactionButtons onClickApprove={onClickApprove} isConnected={isConnected}
                                                   approveStatus={approveStatus} onClickWithdraw={onClickWithdraw}
-                                                  balanceUSD={balanceUSD}/>}
+                                                  stakingToken0Amount={stakingToken0Amount}/>}
               {/*{balanceOfRFPStatus && <p>Balance of RFP status: {balanceOfRFPStatus}</p>}*/}
               {/*{<p>Balance of RFP: {(balanceOfRFPData as any)?.toString()}</p>}*/}
               {/*{approveStatus && <p>Approve Status: {approveStatus}</p>}*/}
